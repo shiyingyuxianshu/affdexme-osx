@@ -38,7 +38,6 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
 
 @end
 
-
 @interface AffdexMeViewController ()
 
 @property (assign) NSTimeInterval timestampOfLastUnprocessedFrame;
@@ -812,7 +811,12 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
 
         if (self.smallFaceMode != value) {
             self.smallFaceMode = value;
-            [self updateDetectorOnKeyPathChange];
+
+            // Restart the detector, after delaying long enough to allow the UI to update the checkbox state.
+#define kDetectorRestartDelaySec 0.1
+            [(NSObject *)self performSelector:@selector(updateDetectorOnKeyPathChange)
+                                   withObject:self
+                                   afterDelay:kDetectorRestartDelaySec];
         }
     }
     else
@@ -896,10 +900,10 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     }
     
 #ifdef VIDEO_TEST
-    // create our detector with our desired facial expresions, using the front facing camera
+    // Create the detector with our desired facial expresions using a file as input.
     self.detector = [[AFDXDetector alloc] initWithDelegate:self usingFile:self.mediaFilename maximumFaces:maximumFaces];
 #else
-    // create our detector with our desired facial expresions, using the front facing camera
+    // Create the detector with our desired facial expresions using the currently selected camera.
     self.detector = [[AFDXDetector alloc] initWithDelegate:self
                                         usingCaptureDevice:device
                                               maximumFaces:maximumFaces

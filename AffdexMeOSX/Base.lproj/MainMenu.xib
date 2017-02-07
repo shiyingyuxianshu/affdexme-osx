@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="11762" systemVersion="16C67" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" customObjectInstantitationMethod="direct">
+<document type="com.apple.InterfaceBuilder3.Cocoa.XIB" version="3.0" toolsVersion="11762" systemVersion="16D32" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" customObjectInstantitationMethod="direct">
     <dependencies>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="11762"/>
         <capability name="box content view" minToolsVersion="7.0"/>
@@ -171,14 +171,6 @@
                             </subviews>
                         </view>
                     </box>
-                    <button id="t36-GA-NN0">
-                        <rect key="frame" x="813" y="449" width="48" height="48"/>
-                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
-                        <buttonCell key="cell" type="square" bezelStyle="shadowlessSquare" imagePosition="only" alignment="center" imageScaling="proportionallyUpOrDown" inset="2" id="xXy-43-Odk">
-                            <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
-                            <font key="font" metaFont="system"/>
-                        </buttonCell>
-                    </button>
                     <customView wantsLayer="YES" misplaced="YES" id="TEY-gY-DEq">
                         <rect key="frame" x="839" y="492" width="425" height="220"/>
                         <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
@@ -232,7 +224,7 @@
     </objects>
     <resources>
         <image name="Affectiva_Logo_Clear_Background" width="153.1199951171875" height="70.800003051757812"/>
-        <image name="Partner_Logo" width="153.1199951171875" height="70.800003051757812"/>
+        <image name="Partner_Logo" width="149.75999450683594" height="83.879997253417969"/>
         <image name="camera-lens-icon" width="48" height="48"/>
     </resources>
 </document>
