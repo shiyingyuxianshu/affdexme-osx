@@ -12,6 +12,19 @@
 
 //#define VIDEO_TEST
 
+static NSString *kSelectedCameraKey = @"selectedCamera";
+static NSString *kFacePointsKey = @"drawFacePoints";
+static NSString *kFaceBoxKey = @"drawFaceBox";
+static NSString *kDrawDominantEmojiKey = @"drawDominantEmoji";
+static NSString *kDrawAppearanceIconsKey = @"drawAppearanceIcons";
+static NSString *kDrawFrameRateKey = @"drawFrameRate";
+static NSString *kDrawFramesToScreenKey = @"drawFramesToScreen";
+static NSString *kPointSizeKey = @"pointSize";
+static NSString *kProcessRateKey = @"maxProcessRate";
+static NSString *kLogoSizeKey = @"logoSize";
+static NSString *kLogoOpacityKey = @"logoOpacity";
+static NSString *kSmallFaceModeKey = @"smallFaceMode";
+
 @interface AffdexImageView : NSImageView
 
 @end
@@ -24,7 +37,6 @@
 }
 
 @end
-
 
 @interface AffdexMeViewController ()
 
@@ -108,7 +120,6 @@
     }
     
     self.timestampOfLastProcessedFrame = time;
-
 
     // setup arrays of points and rects
     self.facePointsToDraw = [NSMutableArray new];
@@ -332,24 +343,23 @@
         }
         
         newImage = [AFDXDetector imageByDrawingPoints:self.drawFacePoints ? self.facePointsToDraw : nil
-                                    andRectangles:self.drawFaceBox ? self.faceRectsToDraw : nil
-                                        andImages:imagesArray
-                                       withRadius:self.pointSize
-                                  usingPointColor:[NSColor whiteColor]
-                              usingRectangleColor:faceBoundsColor
-                                  usingImageRects:rectsArray
-                                          onImage:newImage];
+                                        andRectangles:self.drawFaceBox ? self.faceRectsToDraw : nil
+                                            andImages:imagesArray
+                                           withRadius:self.pointSize
+                                      usingPointColor:[NSColor whiteColor]
+                                  usingRectangleColor:faceBoundsColor
+                                      usingImageRects:rectsArray
+                                              onImage:newImage];
     }
 
-    // flip image if the front camera is being used so that the perspective is mirrored.
-    if (self.cameraToUse == AFDX_CAMERA_FRONT) {
-        NSImage *flippedImage = newImage;
-        [self.imageView setImage:flippedImage];
-    } else {
-        [self.imageView setImage:newImage];
-    }
+    [self.imageView setImage:newImage];
 
-    
+    // Update image view size to implement scale to fill, where the minimum axis scales to the window size.
+    [self updateImageFrameForSize:[newImage size]];
+
+    // Position the logo view and scale elements accordingly.
+    [self positionLogoView];
+
     // compute frames per second and show
     static NSUInteger smoothCount = 0;
     static const NSUInteger smoothInterval = 60;
@@ -454,11 +464,14 @@
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kDrawFrameRateKey : [NSNumber numberWithBool:NO]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kDrawFramesToScreenKey : [NSNumber numberWithBool:YES]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kProcessRateKey : [NSNumber numberWithFloat:10.0]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoSizeKey : [NSNumber numberWithFloat:20.0]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoOpacityKey : [NSNumber numberWithFloat:0.0]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSmallFaceModeKey : [NSNumber numberWithBool:YES]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSelectedClassifiersKey : [NSMutableArray arrayWithObjects:@"anger", @"joy", @"sadness", @"disgust", @"surprise", @"fear", nil]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kMaxClassifiersShownKey : [NSNumber numberWithInteger:6]}];
 }
 
--(BOOL)canBecomeFirstResponder;
+- (BOOL)canBecomeFirstResponder;
 {
     return YES;
 }
@@ -467,6 +480,163 @@
 {
     self.detector = nil;
     [[NSNotificationCenter defaultCenter] removeObserver:self];
+}
+
+// Update the image frame to fit the enclosing view bounds using aspect fill, where the entire
+// window bounds are filled and the image can overflow in one direction to preserve aspect ratio.
+// The image is centered in the main view.
+- (void)updateImageFrameForSize:(NSSize)imageSize;
+{
+    NSRect viewBounds = [self.mainView bounds];
+    double windowWidth = viewBounds.size.width;
+    double windowHeight = viewBounds.size.height;
+
+    double imageWidth = imageSize.width;
+    double imageHeight = imageSize.height;
+    if ((imageWidth == 0.0) || (imageHeight == 0.0))
+    {
+        return;
+    }
+
+    NSRect newImageViewFrame;
+
+    double xScale = windowWidth / imageWidth;
+    double yScale = windowHeight / imageHeight;
+
+    if (xScale > yScale)
+    {
+        newImageViewFrame.size.width = imageWidth * xScale;
+        newImageViewFrame.size.height = imageHeight * xScale;
+    }
+    else
+    {
+        newImageViewFrame.size.width = imageWidth * yScale;
+        newImageViewFrame.size.height = imageHeight * yScale;
+    }
+
+    // Center the image view in the main window.
+    newImageViewFrame.origin.x = (windowWidth - newImageViewFrame.size.width) / 2.0;
+    newImageViewFrame.origin.y = (windowHeight - newImageViewFrame.size.height) / 2.0;
+    self.imageView.frame = newImageViewFrame;
+
+#if 0
+    NSLog(@"Image dimensions: %f x %f\n", imageWidth, imageHeight);
+    NSLog(@"xScale, yScale: %f, %f\n", xScale, yScale);
+    NSLog(@"Window dimensions: %f x %f\n", windowWidth, windowHeight);
+    NSLog(@"Image View origin = %f, %f; dimensions: %f x %f\n", newImageViewFrame.origin.x, newImageViewFrame.origin.y, newImageViewFrame.size.width, newImageViewFrame.size.height);
+#endif
+}
+
+// Position the logo view and scale it and all of its elements accordingly.
+- (void)positionLogoView;
+{
+    NSRect viewBounds = [self.mainView bounds];
+    double windowWidth = viewBounds.size.width;
+    double windowHeight = viewBounds.size.height;
+
+    if ((windowWidth == 0.0) || (windowHeight == 0.0))
+    {
+        return;
+    }
+
+    // When set, the partner logo and a divider will be shown above the Affectiva logo.
+    // Set to 0 to show only the Affectiva logo in the logo view.
+#define SHOW_PARTNER_LOGO 0
+
+    // Position the logo(s) inside the view, while preserving the aspect ratio of each logo.
+#define kLogoViewInsetHorizontal 10.0   // View inset from the upper-right corner of the window.
+#define kLogoViewInsetVertical   10.0
+
+    // The inset parameters for the view contents are scaled proportionately based
+    // on the view size, so the view inset grows proportionately as the view grows.
+#define kLogoViewContentInsetHorizontalFactor 0.05   // Range: 0.0 to 0.5
+#define kLogoViewContentInsetVerticalFactor   0.05   // Range: 0.0 to 0.5
+    CGFloat logoViewScaleFactor = (self.logoSize / 100.0);
+    CGFloat logoViewInsetHorizontal = kLogoViewInsetHorizontal;
+    CGFloat logoViewInsetVertical = kLogoViewInsetVertical;
+
+    CGFloat newLogoViewWidth = (windowWidth - 2.0 * logoViewInsetHorizontal) * logoViewScaleFactor;
+    CGFloat newLogoViewHeight = 0.0;
+    CGFloat newLogoViewOriginX = windowWidth - newLogoViewWidth - logoViewInsetHorizontal;
+
+    CGFloat logoViewContentInsetHorizontal = logoViewScaleFactor * windowWidth * kLogoViewContentInsetHorizontalFactor;
+    CGFloat logoViewContentInsetVertical = logoViewScaleFactor * windowHeight * kLogoViewContentInsetVerticalFactor;
+
+    CGFloat newLogoViewContentWidthInset = newLogoViewWidth - 2.0 * logoViewContentInsetHorizontal;
+
+    // Position the Affectiva logo.
+#if SHOW_PARTNER_LOGO
+#define kAffectivaLogoScaleFactor 0.44   // Scale of Affectiva logo relative to the view content size.
+    CGFloat newAffectivaLogoWidth = newLogoViewContentWidthInset * kAffectivaLogoScaleFactor;
+#else
+    CGFloat newAffectivaLogoWidth = newLogoViewContentWidthInset;
+#endif
+    CGFloat newAffectivaLogoHeight = newAffectivaLogoWidth / self.affectivaLogoAspectRatio;
+    CGFloat newAffectivaLogoOriginX = newLogoViewWidth - logoViewContentInsetHorizontal - newAffectivaLogoWidth;
+    CGFloat newAffectivaLogoOriginY = logoViewContentInsetVertical;
+
+    NSRect newAffectivaLogoFrame = CGRectMake(newAffectivaLogoOriginX, newAffectivaLogoOriginY, newAffectivaLogoWidth, newAffectivaLogoHeight);
+    self.affectivaLogo.imageScaling = NSImageScaleAxesIndependently;
+    self.affectivaLogo.frame = newAffectivaLogoFrame;
+
+#if 0
+    NSLog(@"Affectiva Logo View origin = %f, %f; dimensions: %f x %f\n", self.affectivaLogo.frame.origin.x, self.affectivaLogo.frame.origin.y, self.affectivaLogo.frame.size.width, self.affectivaLogo.frame.size.height);
+#endif
+
+    // Add the lower vertical spacing plus logo height to the view height.
+    newLogoViewHeight += logoViewContentInsetVertical + newAffectivaLogoHeight;
+
+#if SHOW_PARTNER_LOGO
+    // Position the divider between the logos, centered horizontally.
+#define kDividerScaleFactorHorizontal 0.8   // Scale of divider relative to the logo view.
+#define kDividerOffsetFactorVertical 0.05    // Top offset factor of divider relative to the logo view.
+    CGFloat newDividerVerticalSpacing = newLogoViewWidth * kDividerOffsetFactorVertical;
+    CGFloat newDividerWidth = newLogoViewContentWidthInset * kDividerScaleFactorHorizontal;
+    CGFloat newDividerHeight = 2.0;
+
+    CGFloat newDividerOriginX = newLogoViewWidth - logoViewContentInsetHorizontal - (newLogoViewContentWidthInset - newDividerWidth) / 2.0 - newDividerWidth;
+    CGFloat newDividerOriginY = newLogoViewHeight + newDividerVerticalSpacing;
+
+    NSRect newDividerFrame = CGRectMake(newDividerOriginX, newDividerOriginY, newDividerWidth, newDividerHeight);
+    self.logoDivider.frame = newDividerFrame;
+
+    // Add the lower vertical spacing plus divider height to the view height.
+    newLogoViewHeight += newDividerVerticalSpacing + newDividerHeight;
+
+    // Update the Affectiva logo frame to center it under the divider.
+    newAffectivaLogoOriginX = newLogoViewWidth - logoViewContentInsetHorizontal - (newLogoViewContentWidthInset - newAffectivaLogoWidth) / 2.0 - newAffectivaLogoWidth;
+    newAffectivaLogoFrame = CGRectMake(newAffectivaLogoOriginX, newAffectivaLogoOriginY, newAffectivaLogoWidth, newAffectivaLogoHeight);
+    self.affectivaLogo.frame = newAffectivaLogoFrame;
+
+    // Position partner logo
+    CGFloat newPartnerLogoWidth = newLogoViewContentWidthInset;
+    CGFloat newPartnerLogoHeight = newPartnerLogoWidth / self.partnerLogoAspectRatio;
+    CGFloat newPartnerLogoOriginX = logoViewContentInsetHorizontal;
+    CGFloat newPartnerLogoOriginY = newLogoViewHeight + newDividerVerticalSpacing;
+
+    NSRect newPartnerLogoFrame = CGRectMake(newPartnerLogoOriginX, newPartnerLogoOriginY, newPartnerLogoWidth, newPartnerLogoHeight);
+    self.partnerLogo.imageScaling = NSImageScaleAxesIndependently;
+    self.partnerLogo.frame = newPartnerLogoFrame;
+
+    // Add the lower vertical spacing plus the partner logo height to the view height.
+    newLogoViewHeight += newDividerVerticalSpacing + newPartnerLogoHeight;
+#else
+    self.logoDivider.hidden = YES;
+    self.partnerLogo.hidden = YES;
+#endif // SHOW_PARTNER_LOGO
+
+    // Add the top margin onto the logo view height.
+    newLogoViewHeight += logoViewContentInsetVertical;
+
+    // Calculate the logo view height last so it encloses all of the internal elements.
+    CGFloat newLogoViewOriginY = windowHeight - newLogoViewHeight - logoViewInsetVertical;
+
+    // Finally set the frame for the full view.
+    NSRect newLogoViewFrame = CGRectMake(newLogoViewOriginX, newLogoViewOriginY, newLogoViewWidth, newLogoViewHeight);
+    self.logoView.frame = newLogoViewFrame;
+    self.logoView.layer.backgroundColor = CGColorCreateGenericRGB(1.0, 1.0, 1.0, self.logoOpacity/100.0);
+    self.logoView.layer.cornerRadius = 12.0;
+    self.logoView.hidden = NO;
 }
 
 - (void)viewDidLoad;
@@ -493,19 +663,21 @@
     path = [[NSBundle mainBundle] pathForResource:@"unknown-glasses" ofType:@"png" inDirectory:@"media"];
     self.unknownImageWithGlasses = [[NSImage alloc] initWithContentsOfFile:path];
 
+#if SHOW_PARTNER_LOGO
+    path = [[NSBundle mainBundle] pathForResource:@"Partner_Logo" ofType:@"png" inDirectory:@"."];
+    NSSize partnerLogoSize = [[[NSImage alloc] initWithContentsOfFile:path] size];
+    self.partnerLogoAspectRatio = (partnerLogoSize.height == 0) ? 1.0 : (partnerLogoSize.width / partnerLogoSize.height);
+#endif
+
+    path = [[NSBundle mainBundle] pathForResource:@"Affectiva_Logo_Clear_Background" ofType:@"png" inDirectory:@"."];
+    NSSize affectivaLogoSize = [[[NSImage alloc] initWithContentsOfFile:path] size];
+    self.affectivaLogoAspectRatio = (affectivaLogoSize.height == 0) ? 1.0 : (affectivaLogoSize.width / affectivaLogoSize.height);
+
     self.emotions = [ClassifierModel emotions];
     self.expressions = [ClassifierModel expressions];
     self.emojis = [ClassifierModel emojis];
     
-#if 0
-    self.selectedClassifiers = [[[NSUserDefaults standardUserDefaults] objectForKey:@"classifiers"] mutableCopy];
-    if (self.selectedClassifiers == nil)
-    {
-        self.selectedClassifiers = [NSMutableArray arrayWithObjects:@"anger", @"contempt", @"disgust", @"fear", @"joy", @"sadness", nil];
-        [[NSUserDefaults standardUserDefaults] setObject:self.selectedClassifiers forKey:@"classifiers"];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-    }
-#endif
+    self.logoView.hidden = YES;
 
     [self.shareButton sendActionOn:NSLeftMouseDownMask];
     [self.shareButton.cell setHighlightsBy:NSContentsCellMask];
@@ -514,9 +686,9 @@
 - (void)viewWillDisappear;
 {
     // remove ourself as an observer
-    [[NSUserDefaults standardUserDefaults] removeObserver:self
-                                            forKeyPath:kSelectedCameraKey];
-    
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kSelectedCameraKey];
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kSmallFaceModeKey];
+
     [self stopDetector];
     
     [self resignFirstResponder];
@@ -554,12 +726,18 @@
                                             forKeyPath:kSelectedCameraKey
                                                options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
                                                context:(__bridge void *)kSelectedCameraKey];
+
+    [[NSUserDefaults standardUserDefaults] addObserver:self
+                                            forKeyPath:kSmallFaceModeKey
+                                               options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
+                                               context:(__bridge void *)kSmallFaceModeKey];
 }
 
 - (void)viewDidAppear;
 {
     [super viewDidAppear];
     [self becomeFirstResponder];
+
 #ifdef VIDEO_TEST
     self.mediaFilename = [[NSBundle mainBundle] pathForResource:@"face1" ofType:@"mov"];
     
@@ -570,21 +748,25 @@
 #endif
 }
 
+-(void)updateDetectorOnKeyPathChange;
+{
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [self stopDetector];
+    NSError *error = [self startDetector];
+    if (nil != error)
+    {
+        NSAlert *alert = [NSAlert alertWithError:error];
+        [alert runModal];
+
+        [NSApp terminate:self];
+    }
+}
+
 -(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSString *,id> *)change context:(void *)context
 {
     if (context == (__bridge void *)kSelectedCameraKey)
     {
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        [self stopDetector];
-        NSError *error = [self startDetector];
-        if (nil != error)
-        {
-            NSAlert *alert = [NSAlert alertWithError:error];
-            [alert runModal];
-            
-            [NSApp terminate:self];
-        }
-        
+        [self updateDetectorOnKeyPathChange];
         return;
     }
 
@@ -623,6 +805,21 @@
         self.drawAppearanceIcons = value;
     }
     else
+    if (context == (__bridge void *)kSmallFaceModeKey)
+    {
+        BOOL value = [v boolValue];
+
+        if (self.smallFaceMode != value) {
+            self.smallFaceMode = value;
+
+            // Restart the detector, after delaying long enough to allow the UI to update the checkbox state.
+#define kDetectorRestartDelaySec 0.1
+            [(NSObject *)self performSelector:@selector(updateDetectorOnKeyPathChange)
+                                   withObject:self
+                                   afterDelay:kDetectorRestartDelaySec];
+        }
+    }
+    else
     if (context == (__bridge void *)kDrawFrameRateKey)
     {
         BOOL value = [v boolValue];
@@ -653,6 +850,20 @@
         {
             self.fpsProcessed = 0.0;
         }
+    }
+    else
+    if (context == (__bridge void *)kLogoSizeKey)
+    {
+        CGFloat value = [v floatValue];
+
+        self.logoSize = value;
+    }
+    else
+    if (context == (__bridge void *)kLogoOpacityKey)
+    {
+        CGFloat value = [v floatValue];
+
+        self.logoOpacity = value;
     }
     else
     {
@@ -689,11 +900,14 @@
     }
     
 #ifdef VIDEO_TEST
-    // create our detector with our desired facial expresions, using the front facing camera
+    // Create the detector with our desired facial expresions using a file as input.
     self.detector = [[AFDXDetector alloc] initWithDelegate:self usingFile:self.mediaFilename maximumFaces:maximumFaces];
 #else
-    // create our detector with our desired facial expresions, using the front facing camera
-    self.detector = [[AFDXDetector alloc] initWithDelegate:self usingCaptureDevice:device maximumFaces:maximumFaces];
+    // Create the detector with our desired facial expresions using the currently selected camera.
+    self.detector = [[AFDXDetector alloc] initWithDelegate:self
+                                        usingCaptureDevice:device
+                                              maximumFaces:maximumFaces
+                                                  faceMode:self.smallFaceMode ? SMALL_FACES : LARGE_FACES];
 #endif
     
     // add ourself as an observer of various settings
@@ -717,6 +931,16 @@
                                                options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
                                                context:(__bridge void *)kProcessRateKey];
     
+    [[NSUserDefaults standardUserDefaults] addObserver:self
+                                            forKeyPath:kLogoSizeKey
+                                               options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
+                                               context:(__bridge void *)kLogoSizeKey];
+
+    [[NSUserDefaults standardUserDefaults] addObserver:self
+                                            forKeyPath:kLogoOpacityKey
+                                               options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
+                                               context:(__bridge void *)kLogoOpacityKey];
+
     [[NSUserDefaults standardUserDefaults] addObserver:self
                                             forKeyPath:kDrawDominantEmojiKey
                                                options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
@@ -762,6 +986,7 @@
     [self.detector setDetectAllEmotions:YES];
     [self.detector setDetectAllExpressions:YES];
     [self.detector setDetectEmojis:YES];
+    [self.detector enableAnalytics];
     self.detector.gender = TRUE;
     self.detector.glasses = TRUE;
     
@@ -789,7 +1014,9 @@
         [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kFaceBoxKey];
         [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kPointSizeKey];
         [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kProcessRateKey];
-        
+        [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kLogoSizeKey];
+        [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kLogoOpacityKey];
+
         result = [self.detector stop];
     }
     self.detector = nil;

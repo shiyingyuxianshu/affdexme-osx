@@ -25,6 +25,9 @@
 		68DEC48A1A178731009FCB2E /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 68DEC4881A178731009FCB2E /* MainMenu.xib */; };
 		68DEC4961A178731009FCB2E /* AffdexMeOSXTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 68DEC4951A178731009FCB2E /* AffdexMeOSXTests.m */; };
 		A3D08E77559302A1656F311A /* Pods_AffdexMe.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C913AF9F1EAE26CD85B5A5C /* Pods_AffdexMe.framework */; };
+		D916846D1E0EF88D007EA5D0 /* Partner_Logo.png in Resources */ = {isa = PBXBuildFile; fileRef = D916846C1E0EF88D007EA5D0 /* Partner_Logo.png */; };
+		D9191C061E1BFD5A00C2AEAF /* Poweredby_Affectiva_clearbgk_FNL.png in Resources */ = {isa = PBXBuildFile; fileRef = D9191C051E1BFD5A00C2AEAF /* Poweredby_Affectiva_clearbgk_FNL.png */; };
+		D960A5BF1E14956E00719E6C /* Affectiva_Logo_Clear_Background.png in Resources */ = {isa = PBXBuildFile; fileRef = D960A5BE1E14956E00719E6C /* Affectiva_Logo_Clear_Background.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +85,9 @@
 		68DEC4951A178731009FCB2E /* AffdexMeOSXTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AffdexMeOSXTests.m; sourceTree = "<group>"; };
 		6C913AF9F1EAE26CD85B5A5C /* Pods_AffdexMe.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_AffdexMe.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		819FE234EFB7A6A78C5A92A9 /* Pods-AffdexMe.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AffdexMe.release.xcconfig"; path = "Pods/Target Support Files/Pods-AffdexMe/Pods-AffdexMe.release.xcconfig"; sourceTree = "<group>"; };
+		D916846C1E0EF88D007EA5D0 /* Partner_Logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Partner_Logo.png; path = logos/Partner_Logo.png; sourceTree = "<group>"; };
+		D9191C051E1BFD5A00C2AEAF /* Poweredby_Affectiva_clearbgk_FNL.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Poweredby_Affectiva_clearbgk_FNL.png; path = logos/Poweredby_Affectiva_clearbgk_FNL.png; sourceTree = "<group>"; };
+		D960A5BE1E14956E00719E6C /* Affectiva_Logo_Clear_Background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = Affectiva_Logo_Clear_Background.png; path = logos/Affectiva_Logo_Clear_Background.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,6 +120,9 @@
 		68DEC4731A178731009FCB2E = {
 			isa = PBXGroup;
 			children = (
+				D9191C051E1BFD5A00C2AEAF /* Poweredby_Affectiva_clearbgk_FNL.png */,
+				D960A5BE1E14956E00719E6C /* Affectiva_Logo_Clear_Background.png */,
+				D916846C1E0EF88D007EA5D0 /* Partner_Logo.png */,
 				6804019F1CC8F35F001AF417 /* camera-lens-icon.png */,
 				684C31C01CAC66B500718B91 /* AffdexMe.entitlements */,
 				688DFABC1CA037510045A9F0 /* classifiers.png */,
@@ -246,7 +255,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0730;
-				LastUpgradeCheck = 0710;
+				LastUpgradeCheck = 0820;
 				ORGANIZATIONNAME = "tee-boy";
 				TargetAttributes = {
 					68DEC47B1A178731009FCB2E = {
@@ -289,13 +298,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				68DEC4871A178731009FCB2E /* Images.xcassets in Resources */,
+				D9191C061E1BFD5A00C2AEAF /* Poweredby_Affectiva_clearbgk_FNL.png in Resources */,
 				688DFABF1CA037510045A9F0 /* settings.png in Resources */,
 				68DEC48A1A178731009FCB2E /* MainMenu.xib in Resources */,
 				68773BF81A1794970087D532 /* ExpressionView.xib in Resources */,
 				680079361C9325CF009D9AD4 /* PreferencesWindow.xib in Resources */,
 				680401A01CC8F35F001AF417 /* camera-lens-icon.png in Resources */,
 				688DFABE1CA037510045A9F0 /* classifiers.png in Resources */,
+				D960A5BF1E14956E00719E6C /* Affectiva_Logo_Clear_Background.png in Resources */,
 				680079391C932826009D9AD4 /* media in Resources */,
+				D916846D1E0EF88D007EA5D0 /* Partner_Logo.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,8 +427,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
@@ -424,6 +438,7 @@
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -456,8 +471,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
@@ -465,6 +482,7 @@
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
