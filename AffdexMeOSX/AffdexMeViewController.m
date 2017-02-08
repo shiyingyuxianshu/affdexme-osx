@@ -466,7 +466,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kProcessRateKey : [NSNumber numberWithFloat:10.0]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoSizeKey : [NSNumber numberWithFloat:20.0]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoOpacityKey : [NSNumber numberWithFloat:0.0]}];
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSmallFaceModeKey : [NSNumber numberWithBool:NO]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSmallFaceModeKey : [NSNumber numberWithBool:YES]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSelectedClassifiersKey : [NSMutableArray arrayWithObjects:@"anger", @"joy", @"sadness", @"disgust", @"surprise", @"fear", nil]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kMaxClassifiersShownKey : [NSNumber numberWithInteger:6]}];
 }
