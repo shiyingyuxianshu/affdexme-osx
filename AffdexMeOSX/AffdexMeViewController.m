@@ -91,20 +91,21 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
 }
 #endif
 
+// For frame counts, use a smoothing interval to keep the display from updating too rapidly.
+#define kFrameCountSmoothingInterval  20
+
 - (void)processedImageReady:(AFDXDetector *)detector
                       image:(NSImage *)image
                       faces:(NSDictionary *)faces
                      atTime:(NSTimeInterval)time;
 {
     self.faces = [faces allValues];
-    
-    
-    // compute frames per second and show
+
+    // Compute frames per second
     static NSUInteger smoothCount = 0;
-    static const NSUInteger smoothInterval = 10;
     static NSTimeInterval interval = 0;
     
-    if (smoothCount++ % smoothInterval == 0)
+    if (smoothCount++ % kFrameCountSmoothingInterval == 0)
     {
         interval = (time - self.timestampOfLastProcessedFrame);
         smoothCount = 1;
@@ -121,7 +122,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     
     self.timestampOfLastProcessedFrame = time;
 
-    // setup arrays of points and rects
+    // Set up arrays of points and rects
     self.facePointsToDraw = [NSMutableArray new];
     self.faceRectsToDraw = [NSMutableArray new];
 
@@ -168,7 +169,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                 }
             }
             
-            // add padding to maxWidth
+            // Add padding to maxWidth
             maxWidth += maxWidth * .10;
             
             for (int i = 0; i < [viewControllers count]; i++)
@@ -183,7 +184,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             }
         }
         
-        // update scores
+        // Update scores
         for (ExpressionViewController *v in viewControllers)
         {
             NSString *scoreProperty = v.classifier.scoreProperty;
@@ -210,47 +211,56 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
         return;
     }
     
-    for (AFDXFace *face in self.faces) {
+    for (AFDXFace *face in self.faces)
+    {
         NSRect faceBounds = face.faceBounds;
-        //faceBounds.origin.y = self.view.bounds.size.height - faceBounds.origin.y;
-        
+
         NSImage *genderImage = nil;
-        switch (face.appearance.gender) {
+        switch (face.appearance.gender)
+        {
             case AFDX_GENDER_MALE:
                 genderImage = self.maleImage;
-                if (face.appearance.glasses == AFDX_GLASSES_YES) {
+                if (face.appearance.glasses == AFDX_GLASSES_YES)
+                {
                     genderImage = self.maleImageWithGlasses;
                 }
                 break;
             case AFDX_GENDER_FEMALE:
                 genderImage = self.femaleImage;
-                if (face.appearance.glasses == AFDX_GLASSES_YES) {
+                if (face.appearance.glasses == AFDX_GLASSES_YES)
+                {
                     genderImage = self.femaleImageWithGlasses;
                 }
                 break;
             case AFDX_GENDER_UNKNOWN:
                 genderImage = self.unknownImage;
-                if (face.appearance.glasses == AFDX_GLASSES_YES) {
+                if (face.appearance.glasses == AFDX_GLASSES_YES)
+                {
                     genderImage = self.unknownImageWithGlasses;
                 }
                 break;
         }
 
-        // create array of images and rects to do all drawing at once
+        // Create array of images and rects to do all drawing at once.
         NSMutableArray *imagesArray = [NSMutableArray array];
         NSMutableArray *rectsArray = [NSMutableArray array];
         
         // add dominant emoji
-        if (self.drawDominantEmoji) {
+        if (self.drawDominantEmoji)
+        {
             Emoji dominantEmoji = [[face.userInfo objectForKey:@"dominantEmoji"] intValue];
-            if (dominantEmoji != AFDX_EMOJI_NONE) {
-                for (ClassifierModel *model in self.emojis) {
+            if (dominantEmoji != AFDX_EMOJI_NONE)
+            {
+                for (ClassifierModel *model in self.emojis)
+                {
                     NSNumber *code = model.emojiCode;
-                    if (dominantEmoji == [code intValue]) {
+                    if (dominantEmoji == [code intValue])
+                    {
                         // match!
                         NSImage *emojiImage = model.image;
-                        if (nil != emojiImage) {
-                            // resize bounds to be relative in size to bounding box
+                        if (nil != emojiImage)
+                        {
+                            // Resize bounds to be relative in size to bounding box.
                             CGSize size = emojiImage.size;
                             CGFloat aspectRatio = size.height / size.width;
                             size.width = faceBounds.size.width * .33;
@@ -269,9 +279,12 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             }
         }
 
-        if (self.drawAppearanceIcons) {
+        // Select gender image and dominant emotion.
+        if (self.drawAppearanceIcons)
+        {
             // add gender image
-            if (genderImage != nil) {
+            if (genderImage != nil)
+            {
                 // resize bounds to be relative in size to bounding box
                 CGSize size = genderImage.size;
                 CGFloat aspectRatio = size.height / size.width;
@@ -286,16 +299,20 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                 [rectsArray addObject:[NSValue valueWithRect:rect]];
             }
 
-            // add dominant emotion/expression
-            if (self.multifaceMode == TRUE) {
+            // Add dominant emotion/expression
+            if (self.multifaceMode == TRUE)
+            {
                 CGFloat dominantScore = -9999;
                 NSString *dominantName = @"NONAME";
              
-                for (NSDictionary *d in self.emotions) {
+                for (NSDictionary *d in self.emotions)
+                {
                     NSString *name = [d objectForKey:@"name"];
                     CGFloat score = [[face valueForKeyPath:[d objectForKey:@"score"]] floatValue];
-                    // don't allow valence as per Steve H's suggestion
-                    if ([name isEqualToString:@"Valence"]) {
+
+                    // Don't allow valence to be the dominant emotion per Steve H's suggestion.
+                    if ([name isEqualToString:@"Valence"])
+                    {
                         continue;
                     }
                     if (score > dominantScore) {
@@ -306,7 +323,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             }
         }
         
-        // do drawing here
+        // Do drawing here.
         NSColor *faceBoundsColor = nil;
         
         if (face.emotions.valence >= 20)
@@ -322,7 +339,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             faceBoundsColor = [NSColor whiteColor];
         }
         
-        // Position expression views
+        // Position expression views.
         NSMutableArray *viewControllers = [face.userInfo objectForKey:@"viewControllers"];
         NSViewController *vc = [viewControllers objectAtIndex:0];
         CGFloat expressionFrameHeight = vc.view.frame.size.height;
@@ -360,12 +377,11 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     // Position the logo view and scale elements accordingly.
     [self positionLogoView];
 
-    // compute frames per second and show
+    // Compute unprocessed frames per second and show.
     static NSUInteger smoothCount = 0;
-    static const NSUInteger smoothInterval = 60;
     static NSTimeInterval interval = 0;
     
-    if (smoothCount++ % smoothInterval == 0)
+    if (smoothCount++ % kFrameCountSmoothingInterval == 0)
     {
         interval = (time - self.timestampOfLastUnprocessedFrame);
         smoothCount = 1;
@@ -381,7 +397,11 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     }
 
     self.timestampOfLastUnprocessedFrame = time;
-    
+
+    self.fpsProcessedTextField.stringValue = [NSString stringWithFormat:@"FPS(P): %.1f", self.fpsProcessed];
+    self.fpsUnprocessedTextField.stringValue = [NSString stringWithFormat:@"FPS(U): %.1f", self.fpsUnprocessed];
+    self.resolution.stringValue = [NSString stringWithFormat:@"%.0f x %.0f", image.size.width, image.size.height];
+
 #ifdef VIDEO_TEST
     static NSTimeInterval last = 0;
     const CGFloat timeConstant = 0.0000001;
@@ -392,26 +412,35 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
 
 - (void)detector:(AFDXDetector *)detector hasResults:(NSMutableDictionary *)faces forImage:(NSImage *)image atTime:(NSTimeInterval)time;
 {
-    
-    self.fpsProcessedTextField.stringValue = [NSString stringWithFormat:@"FPS(P): %.1f", self.fpsProcessed];
-    self.fpsUnprocessedTextField.stringValue = [NSString stringWithFormat:@"FPS(U): %.1f", self.fpsUnprocessed];
-    self.resolution.stringValue = [NSString stringWithFormat:@"%.0f x %.0f", image.size.width, image.size.height];
+    static long processedFrameCount = 0;
+    static long unprocessedFrameCount = 0;
 
 #if 0
-    static BOOL frameCount = 0;
-    if (frameCount++ % 1 != 0)
-    {
-        return;
-    }
+    self.resolution.stringValue = [NSString stringWithFormat:@"%ld P: %ld U: %ld",
+                                   (unsigned long) [faces count], processedFrameCount, unprocessedFrameCount - processedFrameCount];
 #endif
-    
-    if (nil == faces)
+
+#if 1
+    self.fpsProcessedTextField.textColor = [NSColor whiteColor];
+    self.fpsUnprocessedTextField.textColor = [NSColor whiteColor];
+    self.resolution.textColor = [NSColor whiteColor];
+#endif
+
+    // For each frame, we will get a call with faces == null before the image is processed, and
+    // with faces set to an NSDictionary pointer after the frame is processed.  For a processed
+    // frame call, this dictionary will be non-bull but zero-length if no faces were detected.
+    // If the frame is internally dropped within the SDK, only an unprocessed call (faces == null)
+    // will be received for that frame.
+    //
+    if (faces != nil)
     {
-        [self unprocessedImageReady:detector image:image atTime:time];
+        processedFrameCount++;
+        [self processedImageReady:detector image:image faces:faces atTime:time];
     }
     else
     {
-        [self processedImageReady:detector image:image faces:faces atTime:time];
+        unprocessedFrameCount++;
+        [self unprocessedImageReady:detector image:image atTime:time];
     }
 }
 
@@ -426,9 +455,11 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
         [viewControllers addObject:vc];
     }
 
-    face.userInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:viewControllers, @"viewControllers",
-                            [NSNumber numberWithInt:AFDX_EMOJI_NONE], @"dominantEmoji",
-                            nil];
+    face.userInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:viewControllers,
+                     @"viewControllers",
+                     [NSNumber numberWithInt:AFDX_EMOJI_NONE],
+                     @"dominantEmoji",
+                     nil];
     
     self.selectedClassifiersDirty = YES;
 }
