@@ -24,6 +24,7 @@ static NSString *kProcessRateKey = @"maxProcessRate";
 static NSString *kLogoSizeKey = @"logoSize";
 static NSString *kLogoOpacityKey = @"logoOpacity";
 static NSString *kSmallFaceModeKey = @"smallFaceMode";
+static NSString *kHorizontalFlipKey = @"horizontalFlip";
 
 @interface AffdexImageView : NSImageView
 
@@ -203,14 +204,32 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
 
 - (void)unprocessedImageReady:(AFDXDetector *)detector image:(NSImage *)image atTime:(NSTimeInterval)time;
 {
-    NSImage *newImage = image;
     self.statsView.hidden = !self.drawFrameRate;
-    
+
     if (self.drawFramesToScreen == NO)
     {
         return;
     }
-    
+
+    NSImage *newImage = image;
+#if TARGET_OS_OSX
+    if (self.faces.count == 0)
+    {
+        // Even if the original image does not need any face data overlays, create a new image
+        // to pass back to the caller.  This ensures that the image is rendered at the correct
+        // orientation for the device, which fixes performance issues when drawing images which
+        // have no faces detected.
+        newImage = [AFDXDetector imageByDrawingPoints:nil
+                                        andRectangles:nil
+                                            andImages:nil
+                                           withRadius:self.pointSize
+                                      usingPointColor:[NSColor whiteColor]
+                                  usingRectangleColor:[NSColor whiteColor]
+                                      usingImageRects:nil
+                                              onImage:newImage];
+    }
+#endif
+
     for (AFDXFace *face in self.faces)
     {
         NSRect faceBounds = face.faceBounds;
@@ -265,7 +284,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                             CGFloat aspectRatio = size.height / size.width;
                             size.width = faceBounds.size.width * .33;
                             size.height = size.width * aspectRatio;
-                            
+
                             CGRect rect = CGRectMake(faceBounds.origin.x + faceBounds.size.width,
                                                      image.size.height - (faceBounds.origin.y) - (size.height),
                                                      size.width,
@@ -290,7 +309,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                 CGFloat aspectRatio = size.height / size.width;
                 size.width = faceBounds.size.width * .33;
                 size.height = size.width * aspectRatio;
-                
+
                 CGRect rect = CGRectMake(faceBounds.origin.x + faceBounds.size.width,
                                          image.size.height - (faceBounds.origin.y) - (faceBounds.size.height),
                                          size.width,
@@ -358,7 +377,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             [rectsArray addObject:[NSValue valueWithRect:frame]];
             nextY -= expressionFrameIncrement;
         }
-        
+
         newImage = [AFDXDetector imageByDrawingPoints:self.drawFacePoints ? self.facePointsToDraw : nil
                                         andRectangles:self.drawFaceBox ? self.faceRectsToDraw : nil
                                             andImages:imagesArray
@@ -498,7 +517,9 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoSizeKey : [NSNumber numberWithFloat:20.0]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kLogoOpacityKey : [NSNumber numberWithFloat:0.0]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSmallFaceModeKey : [NSNumber numberWithBool:YES]}];
-    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSelectedClassifiersKey : [NSMutableArray arrayWithObjects:@"anger", @"joy", @"sadness", @"disgust", @"surprise", @"fear", nil]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kHorizontalFlipKey : [NSNumber numberWithBool:NO]}];
+    [[NSUserDefaults standardUserDefaults] registerDefaults:@{kSelectedClassifiersKey :
+        [NSMutableArray arrayWithObjects:@"anger", @"joy", @"sadness", @"disgust", @"surprise", @"fear", nil]}];
     [[NSUserDefaults standardUserDefaults] registerDefaults:@{kMaxClassifiersShownKey : [NSNumber numberWithInteger:6]}];
 }
 
@@ -719,6 +740,7 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     // remove ourself as an observer
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kSelectedCameraKey];
     [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kSmallFaceModeKey];
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:kHorizontalFlipKey];
 
     [self stopDetector];
     
@@ -762,6 +784,11 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                                             forKeyPath:kSmallFaceModeKey
                                                options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
                                                context:(__bridge void *)kSmallFaceModeKey];
+
+    [[NSUserDefaults standardUserDefaults] addObserver:self
+                                            forKeyPath:kHorizontalFlipKey
+                                               options:NSKeyValueObservingOptionInitial | NSKeyValueObservingOptionNew
+                                               context:(__bridge void *)kHorizontalFlipKey];
 }
 
 - (void)viewDidAppear;
@@ -814,33 +841,30 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
         
         self.drawFacePoints = value;
     }
-    else
-    if (context == (__bridge void *)kFaceBoxKey)
+    else if (context == (__bridge void *)kFaceBoxKey)
     {
         BOOL value = [v boolValue];
         
         self.drawFaceBox = value;
     }
-    else
-    if (context == (__bridge void *)kDrawDominantEmojiKey)
+    else if (context == (__bridge void *)kDrawDominantEmojiKey)
     {
         BOOL value = [v boolValue];
             
         self.drawDominantEmoji = value;
     }
-    else
-    if (context == (__bridge void *)kDrawAppearanceIconsKey)
+    else if (context == (__bridge void *)kDrawAppearanceIconsKey)
     {
         BOOL value = [v boolValue];
         
         self.drawAppearanceIcons = value;
     }
-    else
-    if (context == (__bridge void *)kSmallFaceModeKey)
+    else if (context == (__bridge void *)kSmallFaceModeKey)
     {
         BOOL value = [v boolValue];
 
-        if (self.smallFaceMode != value) {
+        if (self.smallFaceMode != value)
+        {
             self.smallFaceMode = value;
 
             // Restart the detector, after delaying long enough to allow the UI to update the checkbox state.
@@ -850,29 +874,39 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
                                    afterDelay:kDetectorRestartDelaySec];
         }
     }
-    else
-    if (context == (__bridge void *)kDrawFrameRateKey)
+    else if (context == (__bridge void *)kHorizontalFlipKey)
+    {
+        BOOL value = [v boolValue];
+
+        if (self.horizontalFlip != value)
+        {
+            self.horizontalFlip = value;
+
+            // Restart the detector, after delaying long enough to allow the UI to update the checkbox state.
+            [(NSObject *)self performSelector:@selector(updateDetectorOnKeyPathChange)
+                                   withObject:self
+                                   afterDelay:kDetectorRestartDelaySec];
+        }
+    }
+    else if (context == (__bridge void *)kDrawFrameRateKey)
     {
         BOOL value = [v boolValue];
         
         self.drawFrameRate = value;
     }
-    else
-    if (context == (__bridge void *)kDrawFramesToScreenKey)
+    else if (context == (__bridge void *)kDrawFramesToScreenKey)
     {
         BOOL value = [v boolValue];
         
         self.drawFramesToScreen = value;
     }
-    else
-    if (context == (__bridge void *)kPointSizeKey)
+    else if (context == (__bridge void *)kPointSizeKey)
     {
         CGFloat value = [v floatValue];
         
         self.pointSize = value;
     }
-    else
-    if (context == (__bridge void *)kProcessRateKey)
+    else if (context == (__bridge void *)kProcessRateKey)
     {
         CGFloat value = [v floatValue];
         
@@ -882,15 +916,13 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
             self.fpsProcessed = 0.0;
         }
     }
-    else
-    if (context == (__bridge void *)kLogoSizeKey)
+    else if (context == (__bridge void *)kLogoSizeKey)
     {
         CGFloat value = [v floatValue];
 
         self.logoSize = value;
     }
-    else
-    if (context == (__bridge void *)kLogoOpacityKey)
+    else if (context == (__bridge void *)kLogoOpacityKey)
     {
         CGFloat value = [v floatValue];
 
@@ -931,12 +963,13 @@ static NSString *kSmallFaceModeKey = @"smallFaceMode";
     }
     
 #ifdef VIDEO_TEST
-    // Create the detector with our desired facial expresions using a file as input.
+    // Create the detector with our desired facial expressions using a file as input.
     self.detector = [[AFDXDetector alloc] initWithDelegate:self usingFile:self.mediaFilename maximumFaces:maximumFaces];
 #else
-    // Create the detector with our desired facial expresions using the currently selected camera.
+    // Create the detector with our desired facial expressions using the currently selected camera.
     self.detector = [[AFDXDetector alloc] initWithDelegate:self
                                         usingCaptureDevice:device
+                                        withHorizontalFlip:self.horizontalFlip
                                               maximumFaces:maximumFaces
                                                   faceMode:self.smallFaceMode ? SMALL_FACES : LARGE_FACES];
 #endif
