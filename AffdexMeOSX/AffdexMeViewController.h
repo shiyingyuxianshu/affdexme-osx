@@ -38,6 +38,7 @@
 @property (assign) CGFloat logoSize;
 @property (assign) CGFloat logoOpacity;
 @property (assign) BOOL smallFaceMode;
+@property (assign) BOOL horizontalFlip;
 @property (strong) NSMutableDictionary *faceMeasurements;
 @property (weak) IBOutlet NSView *classifiersView;
 
